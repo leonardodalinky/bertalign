@@ -1,6 +1,6 @@
 import numpy as np
 
-from bertalign import model
+from bertalign import Encoder
 from bertalign.corelib import *
 from bertalign.utils import *
 
@@ -8,6 +8,7 @@ from bertalign.utils import *
 class Bertalign:
     def __init__(
         self,
+        model: Encoder,
         src,
         tgt,
         max_align=5,
@@ -28,21 +29,22 @@ class Bertalign:
 
         src = clean_text(src)
         tgt = clean_text(tgt)
-        src_lang = detect_lang(src)
-        tgt_lang = detect_lang(tgt)
 
         if is_split:
             src_sents = src.splitlines()
             tgt_sents = tgt.splitlines()
+            src_lang, tgt_lang = None, None
         else:
+            src_lang = detect_lang(src)
+            tgt_lang = detect_lang(tgt)
             src_sents = split_sents(src, src_lang)
             tgt_sents = split_sents(tgt, tgt_lang)
+            src_lang = LANG.ISO[src_lang]
+            tgt_lang = LANG.ISO[tgt_lang]
 
         src_num = len(src_sents)
         tgt_num = len(tgt_sents)
 
-        src_lang = LANG.ISO[src_lang]
-        tgt_lang = LANG.ISO[tgt_lang]
 
         print("Source language: {}, Number of sentences: {}".format(src_lang, src_num))
         print("Target language: {}, Number of sentences: {}".format(tgt_lang, tgt_num))
@@ -69,10 +71,9 @@ class Bertalign:
         self.src_vecs = src_vecs
         self.tgt_vecs = tgt_vecs
 
-    def align_sents(self):
-
+    def align_sents(self, cpu_only=False):
         print("Performing first-step alignment ...")
-        D, I = find_top_k_sents(self.src_vecs[0, :], self.tgt_vecs[0, :], k=self.top_k)
+        D, I = find_top_k_sents(self.src_vecs[0, :], self.tgt_vecs[0, :], k=self.top_k, cpu_only=cpu_only)
         first_alignment_types = get_alignment_types(2)  # 0-1, 1-0, 1-1
         first_w, first_path = find_first_search_path(self.src_num, self.tgt_num)
         first_pointers = first_pass_align(
@@ -114,7 +115,7 @@ class Bertalign:
 
         print(
             "Finished! Successfuly aligning {} {} sentences to {} {} sentences\n".format(
-                self.src_num, self.src_lang, self.tgt_num, self.tgt_lang
+                self.src_num, self.src_lang or "source", self.tgt_num, self.tgt_lang or "target"
             )
         )
         self.result = second_alignment

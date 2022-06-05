@@ -386,19 +386,20 @@ def get_alignment_types(max_alignment_size):
     return np.array(alignment_types)
 
 
-def find_top_k_sents(src_vecs, tgt_vecs, k=3):
+def find_top_k_sents(src_vecs, tgt_vecs, k=3, cpu_only=False):
     """
     Find the top_k similar vecs in tgt_vecs for each vec in src_vecs.
     Args:
         src_vecs: numpy array of shape (num_src_sents, embedding_size).
         tgt_vecs: numpy array of shape (num_tgt_sents, embedding_size).
         k: int. Number of most similar target sentences.
+        cpu_only: bool. If True, use CPU to find the top_k similar vecs.
     Returns:
         D: numpy array. Similarity score matrix of shape (num_src_sents, k).
         I: numpy array. Target index matrix of shape (num_src_sents, k).
     """
     embedding_size = src_vecs.shape[1]
-    if torch.cuda.is_available() and platform == "linux":  # GPU version
+    if torch.cuda.is_available() and platform == "linux" and not cpu_only:  # GPU version
         res = faiss.StandardGpuResources()
         index = faiss.IndexFlatIP(embedding_size)
         gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
